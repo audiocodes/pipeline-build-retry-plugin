@@ -1,0 +1,6 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
+  <j:if test="${it.badge}">
+    <l:icon src="symbol-arrow-redo-outline plugin-ionicons-api" class="icon-sm" tooltip="${it.tooltip}"/>
+  </j:if>
+</j:jelly>

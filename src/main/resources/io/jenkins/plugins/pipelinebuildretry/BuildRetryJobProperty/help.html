@@ -1,0 +1,6 @@
+<div>
+  <p>When a build of this Pipeline job ends badly, queue a new build of the job: after a delay, up to a limit, with the same parameters. This is "Retry build after failure" for Pipeline jobs.</p>
+  <p>The decision is made when the build has ended, after every <code>post</code> block, from its final result, its abort causes, the agents it lost and, optionally, a regular expression found in its log. A retry is a new build with its own number; the in-build <code>retry {}</code> step is a different tool for re-running one block.</p>
+  <p>In a Jenkinsfile: <code>options { buildRetry(maxSchedule: 3) }</code> (Declarative) or <code>properties([buildRetry(maxSchedule: 3)])</code> (Scripted).</p>
+  <p>Some things only a Jenkinsfile can do: stop retries once the build has published or deployed, with <code>buildRetryPointOfNoReturn('why')</code> right before that step; and send a failure notification only when no retry follows, with <code>buildRetryDecision()</code> in <code>post</code>. Both work with the options set on this page.</p>
+</div>

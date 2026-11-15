@@ -1,0 +1,2098 @@
+{
+  "uid": "build-retry-events",
+  "title": "Build retry events",
+  "description": "Retry decisions, retries and retry chains sent by the pipeline-build-retry plugin as OTLP log events (sendEvents) to Loki.",
+  "tags": [
+    "jenkins",
+    "build-retry",
+    "loki",
+    "otel"
+  ],
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "refresh": "5m",
+  "timezone": "browser",
+  "links": [],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "loki",
+        "type": "datasource",
+        "label": "Loki",
+        "query": "loki",
+        "current": {},
+        "hide": 0
+      },
+      {
+        "name": "namespace",
+        "type": "textbox",
+        "label": "Service namespace",
+        "description": "service.namespace of the events: jenkins unless Events resource attributes replaces it.",
+        "query": "jenkins",
+        "current": {
+          "text": "jenkins",
+          "value": "jenkins"
+        },
+        "hide": 0
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "label": "Service",
+        "datasource": {
+          "type": "loki",
+          "uid": "${loki}"
+        },
+        "definition": "label_values({service_namespace=\"$namespace\"}, service_name)",
+        "query": {
+          "type": 1,
+          "label": "service_name",
+          "stream": "{service_namespace=\"$namespace\"}",
+          "refId": "LokiVariableQueryEditor-VariableQuery"
+        },
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "env",
+        "type": "query",
+        "label": "Environment",
+        "datasource": {
+          "type": "loki",
+          "uid": "${loki}"
+        },
+        "description": "deployment.environment.name from the plugin's Events resource attributes; All also shows events sent without it.",
+        "definition": "label_values({service_namespace=\"$namespace\", service_name=~\"$service\"}, deployment_environment_name)",
+        "query": {
+          "type": 1,
+          "label": "deployment_environment_name",
+          "stream": "{service_namespace=\"$namespace\", service_name=~\"$service\"}",
+          "refId": "LokiVariableQueryEditor-VariableQuery"
+        },
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "controller",
+        "type": "textbox",
+        "label": "Controller URL (regex)",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        },
+        "hide": 0
+      },
+      {
+        "name": "job",
+        "type": "textbox",
+        "label": "Job (regex)",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 33,
+      "type": "row",
+      "title": "Configured jobs",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 34,
+      "type": "table",
+      "title": "Jobs using the plugin",
+      "description": "One row per job that has buildRetry, from each job's newest build_retry.job_config event in the dashboard's time range. Controllers send the full list hourly and one job's event when its settings change, only with Send configured jobs ticked. A job that loses buildRetry, is deleted or renamed drops out when its event arrives; one removed without its own event drops out at the next full list. Last sent is how long ago the row's event arrived; orange past 2 hours means that controller stopped sending the list, and the row is its last known state.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "{service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.job_config\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\"",
+          "queryType": "range",
+          "maxLines": 5000,
+          "direction": "backward"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "json",
+            "replace": false,
+            "keepTime": true
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Time",
+                "desc": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "build_retry_job_disabled": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_dry_run": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_max_retries": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_delay": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_rerun_if_aborted": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_rerun_on_agent_loss": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_rerun_if_unstable": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_check_regexp": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_regexp_scope": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_gerrit_cause": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_set_by": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_retries_enabled": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_snapshot_reason": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Time": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "ci_pipeline_url": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "build_retry_configured": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "jenkins_url": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "ci_pipeline_id": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "type": "include",
+            "match": "all",
+            "filters": [
+              {
+                "fieldName": "build_retry_configured (lastNotNull)",
+                "config": {
+                  "id": "equal",
+                  "options": {
+                    "value": "true"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "alias": "Age",
+            "replaceFields": false,
+            "binary": {
+              "left": {
+                "fixed": "${__to}"
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time (lastNotNull)"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "build_retry_configured (lastNotNull)": true,
+              "Time (lastNotNull)": true
+            },
+            "renameByName": {
+              "jenkins_url": "Controller",
+              "ci_pipeline_id": "Job",
+              "build_retry_job_disabled (lastNotNull)": "Job disabled",
+              "build_retry_dry_run (lastNotNull)": "Dry run",
+              "build_retry_max_retries (lastNotNull)": "Max retries",
+              "build_retry_delay (lastNotNull)": "Delay",
+              "build_retry_rerun_if_aborted (lastNotNull)": "Rerun if aborted",
+              "build_retry_rerun_on_agent_loss (lastNotNull)": "Agent loss",
+              "build_retry_rerun_if_unstable (lastNotNull)": "Unstable",
+              "build_retry_check_regexp (lastNotNull)": "Regexp gate",
+              "build_retry_regexp_scope (lastNotNull)": "Regexp scope",
+              "build_retry_gerrit_cause (lastNotNull)": "Gerrit cause",
+              "build_retry_set_by (lastNotNull)": "Set by",
+              "build_retry_retries_enabled (lastNotNull)": "Retries on",
+              "build_retry_snapshot_reason (lastNotNull)": "Last sent for",
+              "ci_pipeline_url (lastNotNull)": "URL",
+              "Age": "Last sent"
+            },
+            "indexByName": {
+              "jenkins_url": 0,
+              "ci_pipeline_id": 1,
+              "build_retry_job_disabled (lastNotNull)": 2,
+              "build_retry_dry_run (lastNotNull)": 3,
+              "build_retry_max_retries (lastNotNull)": 4,
+              "build_retry_delay (lastNotNull)": 5,
+              "build_retry_rerun_if_aborted (lastNotNull)": 6,
+              "build_retry_rerun_on_agent_loss (lastNotNull)": 7,
+              "build_retry_rerun_if_unstable (lastNotNull)": 8,
+              "build_retry_check_regexp (lastNotNull)": 9,
+              "build_retry_regexp_scope (lastNotNull)": 10,
+              "build_retry_gerrit_cause (lastNotNull)": 11,
+              "build_retry_set_by (lastNotNull)": 12,
+              "build_retry_retries_enabled (lastNotNull)": 13,
+              "build_retry_snapshot_reason (lastNotNull)": 14,
+              "ci_pipeline_url (lastNotNull)": 16,
+              "Age": 15
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Job",
+                "desc": false
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": true,
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Job"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open job",
+                    "url": "${__data.fields.URL}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "URL"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last sent"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dtdurationms"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 7200000
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Job"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 280
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Controller"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 220
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "fields": [
+            "Job"
+          ],
+          "countRows": true
+        }
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Decisions",
+      "description": "End decisions sent for builds of jobs with buildRetry, in the time range.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" [$__range]))",
+          "legendFormat": "Decisions",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 12
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Retries queued",
+      "description": "Decisions that queued a retry.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_outcome=\"queued\" [$__range]))",
+          "legendFormat": "Retries queued",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 12
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Would retry (dry run)",
+      "description": "Decisions that would have queued a retry if dryRun were off.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_outcome=\"dry-run\" [$__range]))",
+          "legendFormat": "Would retry (dry run)",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 12
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Chains recovered",
+      "description": "Retry chains whose last build passed.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.chain_ended\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_chain_end=\"recovered\" [$__range]))",
+          "legendFormat": "Chains recovered",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 12
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Chains exhausted",
+      "description": "Retry chains that used every retry and still failed.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.chain_ended\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_chain_end=\"exhausted\" [$__range]))",
+          "legendFormat": "Chains exhausted",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 12
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Retries cancelled",
+      "description": "Waiting retries cancelled because a newer build started (abortPrevious).",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.retry_cancelled\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" [$__range]))",
+          "legendFormat": "Retries cancelled",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 12
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Warnings",
+      "description": "Decisions sent at WARN severity: internal errors, invalid configuration, outcome error.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | severity_text=\"WARN\" [$__range]))",
+          "legendFormat": "Warnings",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 12
+      }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Recovery rate",
+      "description": "Recovered chains out of all ended chains (recovered, exhausted, stopped, cancelled).",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.chain_ended\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_chain_end=\"recovered\" [$__range])) / sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.chain_ended\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" [$__range]))",
+          "legendFormat": "Recovery rate",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 0,
+          "noValue": "-",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 12
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Decisions",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Decisions by outcome",
+      "description": "Each build's end decision, by what became of it.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum by (build_retry_outcome) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" [$__auto]))",
+          "legendFormat": "{{build_retry_outcome}}",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Chain ends",
+      "description": "How retry chains ended over time.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum by (build_retry_chain_end) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.chain_ended\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" [$__auto]))",
+          "legendFormat": "{{build_retry_chain_end}}",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      }
+    },
+    {
+      "id": 13,
+      "type": "bargauge",
+      "title": "No-retry reasons",
+      "description": "Why builds were not retried (reason code before the colon).",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "topk(15, sum by (build_retry_reason) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_outcome=\"no-retry\" [$__range])))",
+          "legendFormat": "{{build_retry_reason}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "maxVizHeight": 24
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 25
+      }
+    },
+    {
+      "id": 14,
+      "type": "bargauge",
+      "title": "Retries queued per job",
+      "description": "Jobs that queued the most retries.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "topk(15, sum by (ci_pipeline_id) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_outcome=\"queued\" [$__range])))",
+          "legendFormat": "{{ci_pipeline_id}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "maxVizHeight": 24
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 25
+      }
+    },
+    {
+      "id": 15,
+      "type": "bargauge",
+      "title": "Would retry per job (dry run)",
+      "description": "Jobs in dry run that would have retried: the pilot view.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "topk(15, sum by (ci_pipeline_id) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_outcome=\"dry-run\" [$__range])))",
+          "legendFormat": "{{ci_pipeline_id}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "maxVizHeight": 24
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 25
+      }
+    },
+    {
+      "id": 16,
+      "type": "piechart",
+      "title": "Abort kinds",
+      "description": "Aborted builds by how they were aborted (user, timeout, infra, unknown).",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum by (build_retry_abort_kind) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_abort_kind!=\"\" [$__range]))",
+          "legendFormat": "{{build_retry_abort_kind}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 34
+      }
+    },
+    {
+      "id": 17,
+      "type": "piechart",
+      "title": "Triggered by",
+      "description": "What started the first build of each chain or single build.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum by (build_retry_cause_kinds) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_retry_count=\"0\" [$__range]))",
+          "legendFormat": "{{build_retry_cause_kinds}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 34
+      }
+    },
+    {
+      "id": 18,
+      "type": "piechart",
+      "title": "Results",
+      "description": "Build results the decisions saw.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum by (ci_pipeline_run_result) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" [$__range]))",
+          "legendFormat": "{{ci_pipeline_run_result}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 34
+      }
+    },
+    {
+      "id": 19,
+      "type": "row",
+      "title": "Retry chains",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "bargauge",
+      "title": "Recovery rate per job",
+      "description": "Recovered chains out of ended chains, per job: how flaky each job is.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum by (ci_pipeline_id) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.chain_ended\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_chain_end=\"recovered\" [$__range])) / sum by (ci_pipeline_id) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.chain_ended\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" [$__range]))",
+          "legendFormat": "{{ci_pipeline_id}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "max": 1,
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "maxVizHeight": 24
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      }
+    },
+    {
+      "id": 21,
+      "type": "bargauge",
+      "title": "Attempts per chain",
+      "description": "Average builds per ended chain, per job (1 is the first build).",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "avg by (ci_pipeline_id) (avg_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.chain_ended\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | unwrap build_retry_attempts [$__range]))",
+          "legendFormat": "{{ci_pipeline_id}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "maxVizHeight": 24
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      }
+    },
+    {
+      "id": 22,
+      "type": "bargauge",
+      "title": "Minutes in retry builds",
+      "description": "Build time spent in retry builds (not the first build), per job.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum by (ci_pipeline_id) (sum_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_retry_count!=\"0\" | unwrap ci_pipeline_run_duration_ms [$__range])) / 60000",
+          "legendFormat": "{{ci_pipeline_id}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "maxVizHeight": 24
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 43
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Planned delay against actual wait",
+      "description": "For each started retry: the delay the decision set and the time from the parent's end to the retry's start.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "avg(avg_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.retry_started\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | unwrap build_retry_planned_delay_seconds [$__auto]))",
+          "legendFormat": "planned delay",
+          "queryType": "range"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "avg(avg_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.retry_started\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | unwrap build_retry_waited_ms [$__auto])) / 1000",
+          "legendFormat": "actual wait",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 52
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Chain duration",
+      "description": "Time from a chain's first build start to its last build end.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "max by (build_retry_chain_end) (max_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.chain_ended\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | unwrap build_retry_chain_duration_ms [$__auto])) / 1000",
+          "legendFormat": "{{build_retry_chain_end}}",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 52
+      }
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "Agents, log scan and errors",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "panels": []
+    },
+    {
+      "id": 26,
+      "type": "bargauge",
+      "title": "Agent loss",
+      "description": "Decisions that saw a lost agent, by reason (OOMKilled is never retried).",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum by (build_retry_reason) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_agent_loss=\"true\" [$__range]))",
+          "legendFormat": "{{build_retry_reason}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "maxVizHeight": 24
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 61
+      }
+    },
+    {
+      "id": 27,
+      "type": "bargauge",
+      "title": "Kubernetes termination reasons",
+      "description": "Termination reasons of the failed agents' containers.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum by (build_retry_termination_reasons) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_termination_reasons!=\"\" [$__range]))",
+          "legendFormat": "{{build_retry_termination_reasons}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "maxVizHeight": 24
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 61
+      }
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Regexp gate problems",
+      "description": "Log scans that timed out, had an invalid pattern or could not read the log.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_scan_timed_out=\"true\" [$__auto]))",
+          "legendFormat": "timed out",
+          "queryType": "range"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_scan_pattern_error=\"true\" [$__auto]))",
+          "legendFormat": "pattern error",
+          "queryType": "range"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "sum(count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_scan_io_error=\"true\" [$__auto]))",
+          "legendFormat": "read error",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 61
+      }
+    },
+    {
+      "id": 35,
+      "type": "bargauge",
+      "title": "Retries blocked by never-retry",
+      "description": "Builds a never-retry pattern stopped from retrying, per job and pattern number (the pattern text is never sent).",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "topk(15, sum by (ci_pipeline_id, build_retry_never_retry_pattern_index) (count_over_time({service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | build_retry_never_retry_matched=\"true\" [$__range])))",
+          "legendFormat": "{{ci_pipeline_id}} pattern #{{build_retry_never_retry_pattern_index}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "maxVizHeight": 24
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 69
+      }
+    },
+    {
+      "id": 29,
+      "type": "logs",
+      "title": "Warnings",
+      "description": "Decisions sent at WARN severity.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "{service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.decision\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\" | severity_text=\"WARN\"",
+          "legendFormat": "",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 77
+      }
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Activity",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 83
+      },
+      "panels": []
+    },
+    {
+      "id": 31,
+      "type": "logs",
+      "title": "Setting changes",
+      "description": "Changes to the retry switch (enabled) and to sendEvents, with who changed them.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "{service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=\"build_retry.switch_changed\" | jenkins_url=~\"$controller\"",
+          "legendFormat": "",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 0,
+        "y": 84
+      }
+    },
+    {
+      "id": 32,
+      "type": "logs",
+      "title": "Latest events",
+      "description": "Every event, newest first.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "{service_name=~\"$service\", service_namespace=\"$namespace\", deployment_environment_name=~\"$env\"} | event_name=~\"build_retry\\\\..*\" | jenkins_url=~\"$controller\" | ci_pipeline_id=~\"$job\"",
+          "legendFormat": "",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 8,
+        "y": 84
+      }
+    }
+  ]
+}

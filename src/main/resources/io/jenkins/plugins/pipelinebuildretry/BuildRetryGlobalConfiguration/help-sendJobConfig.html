@@ -1,0 +1,5 @@
+<div>
+<p>Off by default. When ticked, the events also carry the list of jobs that use the plugin, with their settings: one <code>build_retry.job_config</code> event per job every hour and at startup, and one for a job when its settings change, it loses the plugin, or it is deleted or renamed. This is what the dashboard's "Configured jobs" table reads.</p>
+<p>It works only with <b>Send events</b> ticked and an <b>Events endpoint</b> set. Ticking it sends the full list at once. Unticking it stops new job events and sends nothing else: the dashboard keeps the last list it received, and its <b>Last sent</b> column shows how old each row is. When it is ticked again, jobs that were listed before but were removed meanwhile are sent as no longer configured, as long as the controller has not restarted in between.</p>
+<p>The regular expression of a job is never sent, only whether one is set.</p>
+</div>

@@ -1,0 +1,4 @@
+<div>
+<p>Extra resource attributes sent with every event, as <code>key=value</code> entries, one per line or separated by commas, for example <code>deployment.environment.name=prod</code>. Values cannot contain commas. At most 20 entries are sent.</p>
+<p>They can replace the defaults <code>service.namespace</code> (<code>jenkins</code>) and <code>jenkins.url</code>; <code>service.name</code> is set by <b>Events service name</b> and is ignored here. Loki turns some well-known resource attributes, such as <code>deployment.environment.name</code>, into indexed labels and the rest into structured metadata, with dots turned into underscores (<code>deployment_environment_name</code>); keep label values few, such as one per environment, never per build.</p>
+</div>

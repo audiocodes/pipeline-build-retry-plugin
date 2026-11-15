@@ -1,0 +1,10 @@
+unclassified:
+  buildRetry:
+    enabled: false
+    eventsCredentialsId: events-token
+    eventsEndpoint: https://collector.example:4318
+    eventsResourceAttributes: deployment.environment.name=test
+    eventsServiceName: controller-a
+    regexpTimeoutMs: 12345
+    sendEvents: true
+    sendJobConfig: true

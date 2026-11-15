@@ -1,0 +1,7 @@
+<div>
+<p>On by default. Turn it off to stop every retry on this controller at once, without a restart: when a build with <code>buildRetry</code> ends, the plugin scans nothing, decides nothing and queues nothing, and the build log says <code>[Build Retry] retries are turned off on this controller</code>. <code>buildRetryDecision()</code> returns <code>willRetry: false</code> with reason <code>disabled</code>.</p>
+<p>To turn it off, an administrator runs this line in the script console (Manage Jenkins → Script Console):</p>
+<pre>io.jenkins.plugins.pipelinebuildretry.BuildRetryGlobalConfiguration.get().setEnabled(false)</pre>
+<p><code>io.jenkins.plugins.pipelinebuildretry.BuildRetryGlobalConfiguration.get().setEnabled(true)</code> turns retries back on. The line saves only this plugin's settings file. Unticking this box and saving the page also works, but saving this page saves every setting on it again.</p>
+<p>Retries already waiting in the queue are left as they are; cancel them in the queue if needed. Under <code>abortPrevious</code>, a newer build still cancels a waiting retry. Turning the switch back on applies from the next build that ends.</p>
+</div>

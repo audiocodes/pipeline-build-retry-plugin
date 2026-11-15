@@ -1,0 +1,9 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:entry title="Increment (seconds)" field="increment">
+    <f:number default="300" min="0"/>
+  </f:entry>
+  <f:entry title="Maximum delay (seconds, 0 for no cap)" field="max">
+    <f:number default="10800" min="0"/>
+  </f:entry>
+</j:jelly>

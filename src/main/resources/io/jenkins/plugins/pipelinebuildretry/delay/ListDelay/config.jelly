@@ -1,0 +1,6 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:entry title="Delays (seconds)" field="secondsText">
+    <f:textbox default="30, 90, 180"/>
+  </f:entry>
+</j:jelly>

@@ -1,0 +1,5 @@
+<div>
+<p>Decides now, with the build's current result, whether this build would be retried, and returns the decision as a map: <code>willRetry</code>, <code>wouldRetry</code>, <code>reason</code>, <code>result</code>, <code>abortKind</code>, <code>retryCount</code>, <code>nextRetryCount</code>, <code>maxSchedule</code>, <code>delaySeconds</code> (null when no retry is planned), <code>neverRetryPattern</code> (the number of the never-retry pattern that stopped the retry, or null) and more. Use it in <code>post</code> to word a notification ("will retry" or "failed for good").</p>
+<p>The decision is recorded on the build. When the build ends with the same result, and no point of no return was passed since, the recorded decision is used as it is, so the notification and the retry always agree. When the result changed, the plugin decides again and logs why.</p>
+<p>The step takes no options: it uses the job's <code>buildRetry</code> option. On a job without it, it returns <code>willRetry: false</code> with reason <code>not-configured</code> and records nothing.</p>
+</div>

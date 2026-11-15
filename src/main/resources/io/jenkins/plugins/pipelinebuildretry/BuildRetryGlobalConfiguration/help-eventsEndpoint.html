@@ -1,0 +1,4 @@
+<div>
+<p>The collector's OTLP/HTTP address, such as <code>https://collector:4318</code>; <code>/v1/logs</code> is added unless the address already ends with it. Blank sends nothing. The collector's certificate must be trusted by the controller's Java runtime.</p>
+<p>While the collector cannot be reached, events are dropped and each failed batch logs one <code>Failed to export logs</code> warning. The plugin lowers that OpenTelemetry exporter logger's SEVERE records to warnings without a stack trace, for every plugin that shares it.</p>
+</div>

@@ -1,0 +1,5 @@
+<div>
+<p>Off by default. When on, the plugin sends one event for each retry decision, each retry that starts, each retry chain that ends, each waiting retry that a newer build cancels, and each change of these switches. With <b>Send configured jobs</b> also ticked, it sends the settings of every job that uses the plugin: hourly, at startup, and when a job's settings change. Events go out as OpenTelemetry log records over OTLP/HTTP to <b>Events endpoint</b>.</p>
+<p>Sending needs the OpenTelemetry API plugin, which provides the libraries; the full OpenTelemetry plugin is not needed. The plugin keeps one small exporter with a bounded queue: when the collector is slow or down, events are dropped rather than held, and decisions never wait for it. README "Events" lists every event and attribute.</p>
+<p>The full OpenTelemetry plugin may be installed too; it sends separately, and its settings do not change these events.</p>
+</div>

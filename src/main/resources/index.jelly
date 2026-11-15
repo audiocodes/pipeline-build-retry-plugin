@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    Retry build after failure, for Pipeline jobs: queues a new build after a delay, up to a limit, deciding from the build result, abort causes, agent loss and an optional log pattern.
+</div>
