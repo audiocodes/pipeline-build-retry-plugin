@@ -15,19 +15,13 @@
   <packaging>hpi</packaging>
 
   <name>Pipeline Build Retry</name>
-  <url>https://github.com/audiocodes/${project.artifactId}-plugin</url>
+  <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
   <licenses>
     <license>
       <name>MIT License</name>
       <url>https://opensource.org/license/mit/</url>
     </license>
   </licenses>
-  <developers>
-    <developer>
-      <id>igorac</id>
-      <name>Igor Levin</name>
-    </developer>
-  </developers>
   <scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
     <connection>scm:git:https://github.com/${gitHubRepo}</connection>
     <developerConnection>scm:git:https://github.com/${gitHubRepo}</developerConnection>
@@ -41,12 +35,13 @@
     <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
     <jenkins.baseline>2.555</jenkins.baseline>
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
-    <gitHubRepo>audiocodes/${project.artifactId}-plugin</gitHubRepo>
+    <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
 
     <spotless.check.skip>false</spotless.check.skip>
     <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
     <ban-commons-lang-2.skip>false</ban-commons-lang-2.skip>
     <ban-deprecated-stapler.skip>false</ban-deprecated-stapler.skip>
+    <banObsoleteDependencyOverrides.skip>false</banObsoleteDependencyOverrides.skip>
     <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
     <!-- The oldest release with the logs SDK; override with -D to test against a newer one. -->
     <opentelemetry-api.version>1.39.0-11.vd6b_87589988f</opentelemetry-api.version>

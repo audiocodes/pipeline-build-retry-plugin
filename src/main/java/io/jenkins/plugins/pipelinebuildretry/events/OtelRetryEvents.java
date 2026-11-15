@@ -59,6 +59,8 @@ public class OtelRetryEvents implements RetryEvents {
     static final MethodHandle SET_EVENT_NAME = setEventNameMethod();
 
     /** What the exporter was built from; a change rebuilds it. */
+    // Held in memory only, never serialized; the token comes from a Secret text credential.
+    @SuppressWarnings("lgtm[jenkins/plaintext-storage]")
     record Target(
             String endpoint,
             String token,
