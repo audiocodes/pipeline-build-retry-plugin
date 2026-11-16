@@ -157,18 +157,6 @@ class OtelRetryEventsSenderTest {
                 "a warning without a stack trace: " + seen);
     }
 
-    // Another test dependency pulls a newer credentials in; what controllers see is the declared floor.
-    @Test
-    void thePluginDeclaresTheOldestSupportedCredentials() {
-        PluginWrapper self = j.jenkins.getPluginManager().getPlugin("pipeline-build-retry");
-        String declared = self.getDependencies().stream()
-                .filter(d -> d.shortName.equals("credentials"))
-                .map(d -> d.version)
-                .findFirst()
-                .orElse(null);
-        assertEquals("1506.v948b_b_b_7dec44", declared, "floor declared to controllers");
-    }
-
     @Test
     void theOpenTelemetryApiPluginStaysOptional() {
         PluginWrapper self = j.jenkins.getPluginManager().getPlugin("pipeline-build-retry");

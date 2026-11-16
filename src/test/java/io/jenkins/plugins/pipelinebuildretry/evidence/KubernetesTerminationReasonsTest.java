@@ -14,10 +14,9 @@ import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 class KubernetesTerminationReasonsTest {
 
     @Test
-    void linksAgainstTheOldestSupportedKubernetesPlugin(JenkinsRule j) {
+    void theReaperCallLinksAndRuns(JenkinsRule j) {
         PluginWrapper kubernetes = j.jenkins.getPluginManager().getPlugin("kubernetes");
         assertNotNull(kubernetes, "kubernetes is on the test classpath");
-        assertEquals("4540.v612369217f87", kubernetes.getVersion(), "tests run against the floor");
         KubernetesTerminationReasons source = ExtensionList.lookupSingleton(KubernetesTerminationReasons.class);
         assertEquals(List.of(), List.copyOf(source.reasons("no-such-agent")), "the Reaper call links and runs");
     }

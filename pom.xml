@@ -43,8 +43,6 @@
     <ban-deprecated-stapler.skip>false</ban-deprecated-stapler.skip>
     <banObsoleteDependencyOverrides.skip>false</banObsoleteDependencyOverrides.skip>
     <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
-    <!-- The oldest release with the logs SDK; override with -D to test against a newer one. -->
-    <opentelemetry-api.version>1.39.0-11.vd6b_87589988f</opentelemetry-api.version>
   </properties>
 
   <dependencyManagement>
@@ -53,7 +51,7 @@
         <!-- Pick up common dependencies for the selected LTS line: https://github.com/jenkinsci/bom#usage -->
         <groupId>io.jenkins.tools.bom</groupId>
         <artifactId>bom-${jenkins.baseline}.x</artifactId>
-        <version>7280.ve2096dda_41b_9</version>
+        <version>7349.vd0a_cb_6c87a_31</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -95,21 +93,16 @@
     <dependency>
       <groupId>io.jenkins.plugins</groupId>
       <artifactId>opentelemetry-api</artifactId>
-      <version>${opentelemetry-api.version}</version>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.csanchez.jenkins.plugins</groupId>
       <artifactId>kubernetes</artifactId>
-      <!-- The oldest supported kubernetes; the bom's newer version would raise the plugin's floor. -->
-      <version>4540.v612369217f87</version>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>credentials</artifactId>
-      <!-- The oldest supported credentials; the bom's newer version would raise the plugin's floor. -->
-      <version>1506.v948b_b_b_7dec44</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -122,8 +115,6 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-api</artifactId>
-      <!-- The oldest supported workflow-api; the bom's newer version would raise the plugin's floor. -->
-      <version>1413.v2ff1a_5e720fa_</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -222,25 +213,6 @@
                 <version>1.2.3</version>
               </dependency>
             </dependencies>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <!-- mvn -Potel-latest -Dtest='**/events/*Test' test (test only: packaging raises the floor) -->
-      <id>otel-latest</id>
-      <properties>
-        <opentelemetry-api.version>RELEASE</opentelemetry-api.version>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <systemPropertyVariables>
-                <buildRetry.otelLatest>true</buildRetry.otelLatest>
-              </systemPropertyVariables>
-            </configuration>
           </plugin>
         </plugins>
       </build>

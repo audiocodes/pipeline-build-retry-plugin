@@ -6,13 +6,13 @@ It acts only on Pipeline jobs, multibranch branch jobs included, and only on job
 
 ## Install
 
-1. Download the `.hpi` file of the latest release from [GitHub releases](https://github.com/audiocodes/pipeline-build-retry-plugin/releases), then upload it in **Manage Jenkins → Plugins → Advanced settings → Deploy Plugin**. It needs Jenkins 2.555.3 or newer.
+1. Download the `.hpi` file of the latest release from [GitHub releases](https://github.com/audiocodes/pipeline-build-retry-plugin/releases), then upload it in **Manage Jenkins → Plugins → Advanced settings → Deploy Plugin**. It needs Jenkins 2.555.3 or newer. Update the plugins it depends on first: one older than the version this release depends on stops it from loading.
 2. Restart Jenkins when the plugin manager asks. Every update of the plugin needs a restart, because Jenkins does not replace a loaded plugin.
 3. Turn it on per job with `buildRetry(…)` ([Quick start](#1-quick-start)). Installing it changes no job.
 
-The Kubernetes plugin is optional. When it is installed (4540 or newer), the plugin also reads why an agent pod ended, for example `OOMKilled`.
+The Kubernetes plugin is optional. When it is installed, the plugin also reads why an agent pod ended, for example `OOMKilled`.
 
-The [OpenTelemetry API](https://plugins.jenkins.io/opentelemetry-api/) plugin is optional too, and needed only to [send events](#events-opentelemetry). When it is installed it must be 1.39.0-11 or newer, or Jenkins will not load this plugin; with 1.54.1.102 or newer the events also carry the OpenTelemetry event name.
+The [OpenTelemetry API](https://plugins.jenkins.io/opentelemetry-api/) plugin is optional too, and needed only to [send events](#events-opentelemetry). When it is installed, it must be at least the version this release depends on, or Jenkins will not load this plugin.
 
 ## Contents
 
@@ -307,7 +307,7 @@ The full OpenTelemetry plugin can be installed alongside. The two send separatel
 
 Every event also carries `ci.pipeline.id` (the job's full name), `ci.pipeline.run.number`, `ci.pipeline.run.url`, `ci.pipeline.run.queue_item_id` (the queue item the build started from, which matches the original's `build_retry.copy_queue_item_id` on a copy), the queue time and the duration so far. The record's body is a readable line such as `folder/job #41: FAILURE → retry 1/2 in 300s [queued]`. Strings are cut at 1 KB and lists at 20 entries, joined with `, `.
 
-Each record also has a plain `event_name` attribute holding the event name, because Loki 3.7 and older drop the OpenTelemetry event name field, and opentelemetry-api releases older than 1.54.1.102 cannot set it. In Loki, `service.name` becomes the `service_name` label, other attributes become structured metadata (except a few well-known resource attributes, see **Events resource attributes**), and dots become underscores:
+Each record also has a plain `event_name` attribute holding the event name, because Loki 3.7 and older drop the OpenTelemetry event name field. In Loki, `service.name` becomes the `service_name` label, other attributes become structured metadata (except a few well-known resource attributes, see **Events resource attributes**), and dots become underscores:
 
 ```logql
 {service_name="jenkins"} | event_name="build_retry.decision" | build_retry_outcome="queued"

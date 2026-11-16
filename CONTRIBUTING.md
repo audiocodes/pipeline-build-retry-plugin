@@ -23,7 +23,6 @@ mvn verify
 - `mvn verify` runs everything: the tests (several minutes, most start a real Jenkins), Spotless, SpotBugs, the enforcer rules and Javadoc. It must end green, with SpotBugs at 0.
 - Spotless formatting is enforced, so run `mvn spotless:apply` first.
 - For a quick loop on one class: `mvn -Dtest=RetryDecisionTest -Dmaven.javadoc.skip=true verify`. Run a full `mvn verify` before you open a pull request.
-- If you change `events/`, also run its tests against the newest opentelemetry-api release: `mvn -Potel-latest -Dtest='**/events/*Test' test`. Use `test` only, since a plugin packaged under that profile requires the newer version; a full run under it fails `OpenTelemetryApiFloorTest` for that reason.
 - To try the plugin in a local Jenkins: `mvn hpi:run`.
 
 The code layout, the design decisions and the rules for changing them are in [AGENTS.md](AGENTS.md).

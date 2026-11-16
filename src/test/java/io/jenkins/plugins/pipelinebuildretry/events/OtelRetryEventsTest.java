@@ -22,7 +22,6 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 class OtelRetryEventsTest {
 
@@ -74,12 +73,6 @@ class OtelRetryEventsTest {
                 "io.jenkins.plugins.pipelinebuildretry",
                 r.getInstrumentationScopeInfo().getName(),
                 "scope");
-    }
-
-    @Test
-    @EnabledIfSystemProperty(named = "buildRetry.otelLatest", matches = "true")
-    void theLatestApiHasTheEventName() {
-        assertTrue(apiHasEventName(), "the otel-latest profile resolved an API without setEventName");
     }
 
     @Test
