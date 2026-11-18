@@ -113,7 +113,7 @@ All options are optional. An unknown option fails the build: Declarative names t
 
 **`regexpScope: 'failedStages'`** reads the step logs of the failed top-level stages, the failing step first, plus the `ERROR:` line Jenkins prints for an `error` or failed `sh`. It skips stack-frame lines and the output of passing housekeeping steps (`archiveArtifacts`, `stash`, `junit` and the like). With no failed stage it reads the whole log. Agent-loss patterns always read the whole log.
 
-**`neverRetryPatterns`** lists log text that means a real bug, such as `COMPILATION ERROR`, `error: cannot find symbol`, or the text of the job's own `error('…')` for a bad parameter. Avoid catch-all text such as Maven's `BUILD FAILURE`: flaky failures print it too. The patterns follow the same rules as `regexpForRerun`: Java regular expressions, case-sensitive (`(?i)` to ignore case), matched inside one line, on the masked log, with the plugin's own lines skipped, and searched where `regexpScope` says. They share its timeout. A scan that times out or cannot read the log does not block a retry; a slow `regexpForRerun` can leave them unread. The decision names the pattern by its number, never its text.
+**`neverRetryPatterns`** lists log text that means a real bug, such as `COMPILATION ERROR`, `error: cannot find symbol`, or the text of the job's own `error('…')` for a bad parameter. Avoid catch-all text such as Maven's `BUILD FAILURE`: flaky failures print it too. The patterns follow the same rules as `regexpForRerun`: Java regular expressions, case-sensitive (`(?i)` to ignore case), matched inside one line, on the masked log, and searched where `regexpScope` says. Unlike `regexpForRerun`, they also read lines that contain `[Build Retry]`: a build can print that prefix itself, so skipping those lines would let it hide a stop line. Avoid patterns that match the plugin's own text, such as the decision step's preview and details, `pending retry`, or a `buildRetryPointOfNoReturn` reason. They share its timeout. A scan that times out or cannot read the log does not block a retry; a slow `regexpForRerun` can leave them unread. The decision names the pattern by its number, never its text.
 
 ## 3. Decision order
 
@@ -213,7 +213,7 @@ Set on retried builds only, through `env` and every `sh`/`bat` step:
 
 ## 6. Log lines
 
-Every line starts with `[Build Retry]`. Lines that contain it are never scanned, so a pattern can't match the plugin's own output.
+Every line starts with `[Build Retry]`. `regexpForRerun` and the agent-loss scan skip lines that contain it, so they can't match the plugin's own output. `neverRetryPatterns` read them too, so a build that prints the prefix cannot hide a stop line.
 
 | Line | Meaning |
 |---|---|
@@ -286,7 +286,7 @@ With `sendEvents` on, the plugin sends a structured event at each moment below, 
 
 - **Send configured jobs** (`sendJobConfig`, off by default): also send `build_retry.job_config`, the list of jobs that use the plugin with their settings, every hour and when a job's settings change. It works only with **Send events** on and an endpoint set; the form warns otherwise. Ticking it sends the full list at once. Unticking it only stops new events: nothing is sent to remove jobs, so a dashboard keeps showing the last list it received.
 - **Events endpoint** (`eventsEndpoint`): the collector's address, such as `https://COLLECTOR:4318`; `/v1/logs` is added. Blank sends nothing.
-- **Events token** (`eventsCredentialsId`): optional, a Secret text credential sent as `Authorization: Bearer`. Use the System scope.
+- **Events token** (`eventsCredentialsId`): optional, a Secret text credential sent as `Authorization: Bearer`. Use the System scope. The token goes only over `https`, or over `http` to a loopback address (`localhost`, `127.x.x.x`, `[::1]`). With a token and a plain `http` endpoint on another host, the form shows an error and no events are sent; the controller log gets one WARNING naming the endpoint. A plain `http` endpoint without a token still works.
 - **Events service name** (`eventsServiceName`): the `service.name` resource attribute, `jenkins` by default. Each event also carries `service.namespace=jenkins` and `jenkins.url`.
 - **Events resource attributes** (`eventsResourceAttributes`): optional extra resource attributes as `key=value` entries, one per line or separated by commas, such as `deployment.environment.name=prod`; at most 20, values without commas. They may replace `service.namespace` and `jenkins.url`; `service.name` always comes from its own field. Loki indexes some well-known ones, such as `deployment.environment.name`, as labels, so give them few values.
 

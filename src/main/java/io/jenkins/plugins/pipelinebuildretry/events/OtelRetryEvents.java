@@ -55,6 +55,8 @@ public class OtelRetryEvents implements RetryEvents {
     static final String EXPORTER_LOGGER = "io.opentelemetry.exporter.internal.http.HttpExporter";
     private static final java.util.logging.Logger EXPORTER_LOG = java.util.logging.Logger.getLogger(EXPORTER_LOGGER);
     private static final AtomicBoolean QUIET = new AtomicBoolean();
+    private static final java.util.logging.Logger LOG =
+            java.util.logging.Logger.getLogger(OtelRetryEvents.class.getName());
     // LogRecordBuilder.setEventName exists from OpenTelemetry 1.50; older API plugins send only the attribute.
     static final MethodHandle SET_EVENT_NAME = setEventNameMethod();
 
@@ -71,6 +73,7 @@ public class OtelRetryEvents implements RetryEvents {
     private Target target;
     private SdkLoggerProvider provider;
     private Logger logger;
+    private String refusedEndpoint;
 
     @Override
     public void emit(RetryEvent event) {
@@ -87,9 +90,20 @@ public class OtelRetryEvents implements RetryEvents {
             close();
             return null;
         }
+        String token = c.eventsToken();
+        if (BuildRetryGlobalConfiguration.tokenOverPlainHttp(endpoint, token != null)) {
+            close();
+            if (!endpoint.equals(refusedEndpoint)) {
+                refusedEndpoint = endpoint;
+                LOG.warning("Build Retry events not sent: the events credential is sent only over https or to a"
+                        + " loopback address, and the endpoint is " + endpoint);
+            }
+            return null;
+        }
+        refusedEndpoint = null;
         Target t = new Target(
                 logsUrl(endpoint),
-                c.eventsToken(),
+                token,
                 c.getEventsServiceName(),
                 Jenkins.get().getRootUrl(),
                 c.eventsResourceAttributes());

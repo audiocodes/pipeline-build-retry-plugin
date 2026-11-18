@@ -1,6 +1,7 @@
 package io.jenkins.plugins.pipelinebuildretry.events;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cloudbees.plugins.credentials.CredentialsScope;
@@ -85,6 +86,49 @@ class OtelRetryEventsSenderTest {
         assertTrue(sink().flush(Duration.ofSeconds(10)), "flushed");
         assertTrue(!requests.isEmpty(), "the collector got a request");
         assertEquals("POST /v1/logs Bearer s3cret application/x-protobuf true", requests.get(0), "one OTLP request");
+    }
+
+    @Test
+    void theTokenIsNeverSentOverPlainHttpToAnotherHost() {
+        SystemCredentialsProvider.getInstance()
+                .getCredentials()
+                .add(new StringCredentialsImpl(
+                        CredentialsScope.SYSTEM, "events-token", "test", Secret.fromString("s3cret")));
+        List<LogRecord> logged = new CopyOnWriteArrayList<>();
+        Handler capture = new Handler() {
+            @Override
+            public void publish(LogRecord r) {
+                logged.add(r);
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        Logger log = Logger.getLogger(OtelRetryEvents.class.getName());
+        log.addHandler(capture);
+        try {
+            BuildRetryGlobalConfiguration c = BuildRetryGlobalConfiguration.get();
+            c.setEventsEndpoint("http://collector.invalid:4318");
+            c.setEventsCredentialsId("events-token");
+            c.setSendEvents(true);
+            sink().emit(new RetryEvent("build_retry.test", "one"));
+            sink().emit(new RetryEvent("build_retry.test", "two"));
+            assertFalse(sink().isOpen(), "no exporter for http with a token");
+            assertEquals(
+                    1,
+                    logged.stream().filter(r -> r.getLevel() == Level.WARNING).count(),
+                    "warned once: " + logged.stream().map(LogRecord::getMessage).toList());
+            assertFalse(logged.get(0).getMessage().contains("s3cret"), "the token is not logged");
+            c.setEventsEndpoint("https://collector.invalid:4318");
+            sink().emit(new RetryEvent("build_retry.test", "three"));
+            assertTrue(sink().isOpen(), "https opens the exporter");
+        } finally {
+            sink().close();
+            log.removeHandler(capture);
+        }
     }
 
     @Test

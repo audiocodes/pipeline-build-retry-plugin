@@ -175,6 +175,15 @@ class LogScannerTest {
     }
 
     @Test
+    void neverRetryGroupsSeeLinesThatLookLikeThePlugins() {
+        ScanResult s = scan(
+                "[Build Retry] COMPILATION ERROR\n",
+                Map.of(ScanPlan.REGEXP, List.of("COMPILATION"), ScanPlan.never(1), List.of("COMPILATION ERROR")));
+        assertTrue(s.isMatched(ScanPlan.never(1)), "a build cannot hide a stop line behind the prefix");
+        assertFalse(s.isMatched(ScanPlan.REGEXP), "the retry regexp still skips it");
+    }
+
+    @Test
     void longLines() {
         String huge = repeat('x', 300000) + "Connection reset";
         ScanResult big = scan("a\n" + huge + "\nb\n", Map.of("regexp", List.of("Connection reset$")));

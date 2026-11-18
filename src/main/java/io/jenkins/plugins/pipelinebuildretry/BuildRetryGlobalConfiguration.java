@@ -16,7 +16,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
@@ -37,6 +39,8 @@ public class BuildRetryGlobalConfiguration extends GlobalConfiguration {
     static final int MAX_RESOURCE_ATTRIBUTES = 20;
 
     private static final String SERVICE_NAME = "service.name";
+    private static final String OCTET = "(25[0-5]|2[0-4]\\d|1?\\d?\\d)";
+    private static final Pattern LOOPBACK_V4 = Pattern.compile("127\\." + OCTET + "\\." + OCTET + "\\." + OCTET);
 
     private int regexpTimeoutMs = RetryOptions.DEFAULT_REGEXP_TIMEOUT_MS;
 
@@ -247,18 +251,47 @@ public class BuildRetryGlobalConfiguration extends GlobalConfiguration {
     }
 
     @POST
-    public FormValidation doCheckEventsEndpoint(@QueryParameter String value) {
+    public FormValidation doCheckEventsEndpoint(
+            @QueryParameter String value, @QueryParameter String eventsCredentialsId) {
         if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER) || value == null || value.isBlank()) {
             return FormValidation.ok();
         }
         try {
             URI u = new URI(value.trim());
-            return ("http".equals(u.getScheme()) || "https".equals(u.getScheme())) && u.getHost() != null
-                    ? FormValidation.ok()
-                    : FormValidation.error("Enter an http or https address, such as https://collector:4318");
+            if (!("http".equals(u.getScheme()) || "https".equals(u.getScheme())) || u.getHost() == null) {
+                return FormValidation.error("Enter an http or https address, such as https://collector:4318");
+            }
         } catch (URISyntaxException e) {
             return FormValidation.error("Not a valid address: " + e.getReason());
         }
+        return tokenOverPlainHttp(value, blankToNull(eventsCredentialsId) != null)
+                ? FormValidation.error("A credential is sent only over https; use https or a loopback address")
+                : FormValidation.ok();
+    }
+
+    /** True when a token would go to {@code endpoint} over plain http to a host other than loopback. */
+    public static boolean tokenOverPlainHttp(@CheckForNull String endpoint, boolean hasToken) {
+        if (!hasToken || endpoint == null) {
+            return false;
+        }
+        try {
+            URI u = new URI(endpoint.trim());
+            String scheme = u.getScheme() == null ? "" : u.getScheme().toLowerCase(Locale.ROOT);
+            return !"https".equals(scheme) && !isLoopback(u.getHost());
+        } catch (URISyntaxException e) {
+            return true;
+        }
+    }
+
+    // Literal names only: resolving the host would let DNS decide where the token goes.
+    private static boolean isLoopback(@CheckForNull String host) {
+        if (host == null) {
+            return false;
+        }
+        String h = host.toLowerCase(Locale.ROOT);
+        return h.equals("localhost")
+                || h.equals("[::1]")
+                || LOOPBACK_V4.matcher(h).matches();
     }
 
     @POST

@@ -172,7 +172,7 @@ does a line match, within regexpTimeoutMs?
           or regexp-log-unreadable)
 ```
 
-Lines that contain `[Build Retry]` are never matched, so a pattern can't match the plugin's own output.
+Lines that contain `[Build Retry]` are skipped by `regexpForRerun` and the agent-loss scan, so they can't match the plugin's own output. `neverRetryPatterns` read every line: a build can print the prefix too, and must not hide a stop line behind it.
 
 README: [Options](../README.md#2-options), [Limitations](../README.md#9-limitations).
 

@@ -251,6 +251,12 @@ class LogScanTest {
     }
 
     @Test
+    void thePrefixDoesNotHideALineFromNeverRetryPatterns() throws Exception {
+        WorkflowRun r = run("echo '" + RetryDecision.LOG_PREFIX + "COMPILATION ERROR'\nerror 'x'", Result.FAILURE);
+        assertTrue(scan(r, never("build", "COMPILATION ERROR")).isMatched(ScanPlan.never(1)), "spoofed line");
+    }
+
+    @Test
     void scriptedWithoutStagesFallsBackToTheWholeLog() throws Exception {
         WorkflowRun r = run("echo 'Connection reset'\nerror 'x'", Result.FAILURE);
         ScanResult s = scan(r, regexp("failedStages", "Connection reset"));

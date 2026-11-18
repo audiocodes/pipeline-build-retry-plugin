@@ -141,6 +141,16 @@ class BuildRetryListenerTest {
     }
 
     @Test
+    void aStopLineBehindThePluginPrefixStillStopsTheRetry() throws Exception {
+        WorkflowJob p = job(
+                "maxSchedule: 1, delay: fixedDelay(0), neverRetryPatterns: ['COMPILATION ERROR']",
+                "echo '[Build Retry] COMPILATION ERROR'\nerror 'boom'");
+        WorkflowRun r = build(p);
+        j.assertLogContains("no retry (never-retry-matched: pattern #1", r);
+        assertEquals(1, p.getBuilds().size(), "not retried");
+    }
+
+    @Test
     void aScanThatStopsAtTheMatchStillNamesTheConsoleLine() throws Exception {
         WorkflowJob p = job(
                 "maxSchedule: 1, delay: fixedDelay(0), neverRetryPatterns: ['COMPILATION ERROR']",

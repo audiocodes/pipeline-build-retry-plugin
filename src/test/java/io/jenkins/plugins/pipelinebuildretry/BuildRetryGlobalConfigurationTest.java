@@ -101,6 +101,32 @@ class BuildRetryGlobalConfigurationTest {
     }
 
     @Test
+    void aCredentialIsOnlySentOverHttpsOrToLoopback(JenkinsConfiguredWithCodeRule j) {
+        BuildRetryGlobalConfiguration c = BuildRetryGlobalConfiguration.get();
+        FormValidation plain = c.doCheckEventsEndpoint("http://collector:4318", "events-token");
+        assertEquals(FormValidation.Kind.ERROR, plain.kind, "http with a credential");
+        assertTrue(plain.getMessage().contains("https"), plain.getMessage());
+        for (String ok : List.of(
+                "https://collector:4318",
+                "http://127.0.0.1:4318",
+                "http://127.1.2.3:4318",
+                "http://localhost:4318",
+                "http://LOCALHOST:4318",
+                "http://[::1]:4318")) {
+            assertEquals(FormValidation.Kind.OK, c.doCheckEventsEndpoint(ok, "events-token").kind, ok);
+        }
+        assertEquals(
+                FormValidation.Kind.OK, c.doCheckEventsEndpoint("http://collector:4318", "").kind, "no credential");
+        assertEquals(
+                FormValidation.Kind.OK, c.doCheckEventsEndpoint("http://collector:4318", null).kind, "no credential");
+        assertTrue(BuildRetryGlobalConfiguration.tokenOverPlainHttp("HTTP://collector:4318", true), "scheme case");
+        assertTrue(BuildRetryGlobalConfiguration.tokenOverPlainHttp("http://127.evil.example:4318", true), "not IP");
+        assertTrue(BuildRetryGlobalConfiguration.tokenOverPlainHttp("http://localhost.evil.example", true), "suffix");
+        assertFalse(BuildRetryGlobalConfiguration.tokenOverPlainHttp("http://collector:4318", false), "no token");
+        assertFalse(BuildRetryGlobalConfiguration.tokenOverPlainHttp(null, true), "no endpoint");
+    }
+
+    @Test
     void unTickingTheSwitchOnTheSystemPageTurnsRetriesOff(JenkinsConfiguredWithCodeRule j) throws Exception {
         HtmlForm form = j.createWebClient().goTo("manage/configure").getFormByName("config");
         HtmlCheckBoxInput box = form.getInputByName("_.enabled");

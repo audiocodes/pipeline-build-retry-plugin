@@ -85,15 +85,17 @@ public final class LogScanner {
             String line;
             while (!pending.isEmpty() && !Thread.currentThread().isInterrupted() && (line = cutter.next()) != null) {
                 // The plugin's own lines ("retry 2/3", "point of no return") must never feed its decision.
-                if (line.contains(RetryDecision.LOG_PREFIX)) {
-                    continue;
-                }
+                boolean own = line.contains(RetryDecision.LOG_PREFIX);
                 if (line.indexOf("\u001B[8mha:") >= 0) {
                     line = CONSOLE_NOTE.matcher(line).replaceAll("");
                 }
                 CharSequence text = new Interruptible(line);
                 for (Iterator<String> it = pending.iterator(); it.hasNext(); ) {
                     String name = it.next();
+                    // A build can print the prefix too, so it may hide a line only from groups that allow a retry.
+                    if (own && !ScanPlan.isNever(name)) {
+                        continue;
+                    }
                     if (any(inc.get(name), text) && !any(exc.getOrDefault(name, List.of()), text)) {
                         lineOf.put(name, cutter.getCurrentLine());
                         matched.put(name, true);
